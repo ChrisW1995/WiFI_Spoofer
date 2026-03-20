@@ -206,9 +206,10 @@ def _handle_throttle(session: SessionManager, timeout: int) -> None:
         return
 
     selected = [selectable[i].ip for i in indices]
-    bw = _input_text("頻寬限制 (例: 100Kbit/s, 1Mbit/s)", "100Kbit/s")
-    if not bw:
+    bw_num = _input_text("頻寬限制 (Kbit/s，只需輸入數字)", "100")
+    if not bw_num:
         return
+    bw = f"{bw_num}Kbit/s"
 
     added = session.throttle(selected, bw)
     for ip in added:
@@ -358,9 +359,10 @@ def _handle_pulse_block(session: SessionManager, timeout: int) -> None:
         return
 
     selected = [selectable[i].ip for i in indices]
-    bw = _input_text("基礎限速頻寬 (例: 40Kbit/s)", "40Kbit/s")
-    if not bw:
+    bw_num = _input_text("基礎限速頻寬 (Kbit/s，只需輸入數字)", "40")
+    if not bw_num:
         return
+    bw = f"{bw_num}Kbit/s"
 
     try:
         block_secs = float(_input_text("封鎖時長 (秒)", "2"))
