@@ -1,12 +1,10 @@
 import atexit
-import signal
-import sys
 import time
 
+import questionary
 from rich.console import Console
 from rich.live import Live
-from InquirerPy import inquirer
-from InquirerPy.base import Choice
+from rich.panel import Panel
 
 from wifi_cut.session import SessionManager
 from wifi_cut.ui_helpers import make_device_table, make_status_panel, format_device_choice
@@ -59,24 +57,24 @@ def run_tui(timeout: int = 3, interval: float = 1.5) -> None:
 
 def _main_loop(session: SessionManager, timeout: int) -> None:
     while True:
-        try:
-            action = inquirer.select(
-                message="wifi-cut",
-                choices=[
-                    MENU_SCAN,
-                    MENU_VIEW,
-                    MENU_CUT,
-                    MENU_UNCUT,
-                    MENU_THROTTLE,
-                    MENU_UNTHROTTLE,
-                    MENU_BW_TEST,
-                    MENU_PULSE,
-                    MENU_STATUS,
-                    MENU_QUIT,
-                ],
-                default=MENU_SCAN,
-            ).execute()
-        except KeyboardInterrupt:
+        action = questionary.select(
+            "wifi-cut",
+            choices=[
+                MENU_SCAN,
+                MENU_VIEW,
+                MENU_CUT,
+                MENU_UNCUT,
+                MENU_THROTTLE,
+                MENU_UNTHROTTLE,
+                MENU_BW_TEST,
+                MENU_PULSE,
+                MENU_STATUS,
+                MENU_QUIT,
+            ],
+            default=MENU_SCAN,
+        ).ask()
+
+        if action is None:
             return
 
         if action == MENU_SCAN:
@@ -127,6 +125,16 @@ def _handle_view(session: SessionManager) -> None:
     console.print(table)
 
 
+def _make_device_choices(devices, gateway_ip):
+    return [
+        questionary.Choice(
+            title=format_device_choice(d, gateway_ip),
+            value=d.ip,
+        )
+        for d in devices
+    ]
+
+
 def _handle_cut(session: SessionManager, timeout: int) -> None:
     assert session.gateway is not None
     if not session.devices:
@@ -141,18 +149,10 @@ def _handle_cut(session: SessionManager, timeout: int) -> None:
         console.print("[yellow]沒有可封鎖的裝置。[/yellow]")
         return
 
-    choices = [
-        Choice(value=d.ip, name=format_device_choice(d, session.gateway.ip))
-        for d in selectable
-    ]
-
-    try:
-        selected = inquirer.checkbox(
-            message="選擇要封鎖的裝置",
-            choices=choices,
-        ).execute()
-    except KeyboardInterrupt:
-        return
+    selected = questionary.checkbox(
+        "選擇要封鎖的裝置",
+        choices=_make_device_choices(selectable, session.gateway.ip),
+    ).ask()
 
     if not selected:
         console.print("[dim]未選擇任何裝置。[/dim]")
@@ -168,15 +168,12 @@ def _handle_uncut(session: SessionManager) -> None:
         console.print("[yellow]目前沒有封鎖中的裝置。[/yellow]")
         return
 
-    choices = [Choice(value=ip, name=ip) for ip in sorted(session.blocked_ips)]
+    choices = [questionary.Choice(title=ip, value=ip) for ip in sorted(session.blocked_ips)]
 
-    try:
-        selected = inquirer.checkbox(
-            message="選擇要解除封鎖的裝置",
-            choices=choices,
-        ).execute()
-    except KeyboardInterrupt:
-        return
+    selected = questionary.checkbox(
+        "選擇要解除封鎖的裝置",
+        choices=choices,
+    ).ask()
 
     if not selected:
         return
@@ -200,29 +197,21 @@ def _handle_throttle(session: SessionManager, timeout: int) -> None:
         console.print("[yellow]沒有可限速的裝置。[/yellow]")
         return
 
-    choices = [
-        Choice(value=d.ip, name=format_device_choice(d, session.gateway.ip))
-        for d in selectable
-    ]
-
-    try:
-        selected = inquirer.checkbox(
-            message="選擇要限速的裝置",
-            choices=choices,
-        ).execute()
-    except KeyboardInterrupt:
-        return
+    selected = questionary.checkbox(
+        "選擇要限速的裝置",
+        choices=_make_device_choices(selectable, session.gateway.ip),
+    ).ask()
 
     if not selected:
         console.print("[dim]未選擇任何裝置。[/dim]")
         return
 
-    try:
-        bw = inquirer.text(
-            message="頻寬限制 (例: 100Kbit/s, 1Mbit/s)",
-            default="100Kbit/s",
-        ).execute()
-    except KeyboardInterrupt:
+    bw = questionary.text(
+        "頻寬限制 (例: 100Kbit/s, 1Mbit/s)",
+        default="100Kbit/s",
+    ).ask()
+
+    if not bw:
         return
 
     added = session.throttle(selected, bw)
@@ -236,17 +225,14 @@ def _handle_unthrottle(session: SessionManager) -> None:
         return
 
     choices = [
-        Choice(value=ip, name=f"{ip} ({bw})")
+        questionary.Choice(title=f"{ip} ({bw})", value=ip)
         for ip, bw in sorted(session.throttled_ips.items())
     ]
 
-    try:
-        selected = inquirer.checkbox(
-            message="選擇要解除限速的裝置",
-            choices=choices,
-        ).execute()
-    except KeyboardInterrupt:
-        return
+    selected = questionary.checkbox(
+        "選擇要解除限速的裝置",
+        choices=choices,
+    ).ask()
 
     if not selected:
         return
@@ -267,41 +253,21 @@ def _handle_bw_test(session: SessionManager, timeout: int) -> None:
         console.print("[yellow]沒有可測試的裝置。[/yellow]")
         return
 
-    choices = [
-        Choice(value=d.ip, name=format_device_choice(d, session.gateway.ip))
-        for d in selectable
-    ]
-
-    try:
-        selected = inquirer.checkbox(
-            message="選擇要測試的裝置",
-            choices=choices,
-        ).execute()
-    except KeyboardInterrupt:
-        return
+    selected = questionary.checkbox(
+        "選擇要測試的裝置",
+        choices=_make_device_choices(selectable, session.gateway.ip),
+    ).ask()
 
     if not selected:
         console.print("[dim]未選擇任何裝置。[/dim]")
         return
 
     try:
-        start_bw = int(inquirer.text(
-            message="起始頻寬 (Kbit/s)",
-            default="100",
-        ).execute())
-        end_bw = int(inquirer.text(
-            message="結束頻寬 (Kbit/s)",
-            default="10",
-        ).execute())
-        step_bw = int(inquirer.text(
-            message="每步遞減 (Kbit/s)",
-            default="10",
-        ).execute())
-        step_duration = int(inquirer.text(
-            message="每步持續時間 (秒)",
-            default="120",
-        ).execute())
-    except (KeyboardInterrupt, ValueError):
+        start_bw = int(questionary.text("起始頻寬 (Kbit/s)", default="100").ask() or "100")
+        end_bw = int(questionary.text("結束頻寬 (Kbit/s)", default="10").ask() or "10")
+        step_bw = int(questionary.text("每步遞減 (Kbit/s)", default="10").ask() or "10")
+        step_duration = int(questionary.text("每步持續時間 (秒)", default="120").ask() or "120")
+    except (ValueError, TypeError):
         return
 
     last_online_bw = None
@@ -334,7 +300,6 @@ def _handle_bw_test(session: SessionManager, timeout: int) -> None:
 
                         mins, secs = divmod(remaining, 60)
                         ping_status = "[green]Online[/green]" if ping_ok else "[red]WiFi Lost![/red]"
-                        from rich.panel import Panel
                         panel = Panel(
                             f"[cyan]頻寬:[/cyan]     {bw_str}\n"
                             f"[dim]剩餘:[/dim]     {mins:02d}:{secs:02d}\n"
@@ -354,12 +319,12 @@ def _handle_bw_test(session: SessionManager, timeout: int) -> None:
                 offline_bw = current_bw
                 break
 
-            try:
-                still_online = inquirer.confirm(
-                    message=f"請檢查 App，裝置在 {bw_str} 下是否仍在線？",
-                    default=True,
-                ).execute()
-            except KeyboardInterrupt:
+            still_online = questionary.confirm(
+                f"請檢查 App，裝置在 {bw_str} 下是否仍在線？",
+                default=True,
+            ).ask()
+
+            if still_online is None:
                 break
 
             if still_online:
@@ -372,7 +337,6 @@ def _handle_bw_test(session: SessionManager, timeout: int) -> None:
         session.unthrottle(selected)
 
     console.print()
-    from rich.panel import Panel
     if last_online_bw is not None:
         result_text = (
             f"[green]最後在線頻寬:[/green]  {last_online_bw}Kbit/s\n"
@@ -406,37 +370,23 @@ def _handle_pulse_block(session: SessionManager, timeout: int) -> None:
         console.print("[yellow]沒有可用的裝置。[/yellow]")
         return
 
-    choices = [
-        Choice(value=d.ip, name=format_device_choice(d, session.gateway.ip))
-        for d in selectable
-    ]
-
-    try:
-        selected = inquirer.checkbox(
-            message="選擇目標裝置",
-            choices=choices,
-        ).execute()
-    except KeyboardInterrupt:
-        return
+    selected = questionary.checkbox(
+        "選擇目標裝置",
+        choices=_make_device_choices(selectable, session.gateway.ip),
+    ).ask()
 
     if not selected:
         console.print("[dim]未選擇任何裝置。[/dim]")
         return
 
+    bw = questionary.text("基礎限速頻寬 (例: 40Kbit/s)", default="40Kbit/s").ask()
+    if not bw:
+        return
+
     try:
-        bw = inquirer.text(
-            message="基礎限速頻寬 (例: 40Kbit/s)",
-            default="40Kbit/s",
-        ).execute()
-        block_secs = float(inquirer.text(
-            message="封鎖時長 (秒)",
-            default="2",
-        ).execute())
-        allow_secs = float(inquirer.text(
-            message="放行間隔 (秒)",
-            default="5",
-        ).execute())
-    except (KeyboardInterrupt, ValueError):
+        block_secs = float(questionary.text("封鎖時長 (秒)", default="2").ask() or "2")
+        allow_secs = float(questionary.text("放行間隔 (秒)", default="5").ask() or "5")
+    except (ValueError, TypeError):
         return
 
     session.start_pulse_block(selected, bw, block_secs, allow_secs)
@@ -447,7 +397,6 @@ def _handle_pulse_block(session: SessionManager, timeout: int) -> None:
     try:
         with Live(console=console, refresh_per_second=1) as live:
             while True:
-                from rich.panel import Panel
                 ping_ok = session.ping_target(selected[0])
                 ping_status = "[green]Online[/green]" if ping_ok else "[red]Offline![/red]"
                 panel = Panel(
@@ -462,13 +411,7 @@ def _handle_pulse_block(session: SessionManager, timeout: int) -> None:
                 live.update(panel)
                 time.sleep(3)
     except KeyboardInterrupt:
-        try:
-            stop = inquirer.confirm(
-                message="要停止 Pulse Block 嗎？",
-                default=False,
-            ).execute()
-        except KeyboardInterrupt:
-            stop = False
+        stop = questionary.confirm("要停止 Pulse Block 嗎？", default=False).ask()
 
         if stop:
             session.stop_pulse_block()
