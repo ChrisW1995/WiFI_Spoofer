@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 import sys
@@ -69,12 +70,28 @@ class Throttler:
             )
 
         rules = self._build_pf_rules_macos()
-        pf_conf = "/tmp/wifi_cut_pf.conf"
-        with open(pf_conf, "w") as f:
+        anchor_conf = "/tmp/wifi_cut_pf.conf"
+        with open(anchor_conf, "w") as f:
             f.write(rules)
 
+        # 讀取原始 pf.conf，注入 wifi_cut anchor 引用
+        try:
+            with open("/etc/pf.conf", "r") as f:
+                original_pf = f.read()
+        except FileNotFoundError:
+            original_pf = ""
+
+        main_conf = "/tmp/wifi_cut_main_pf.conf"
+        with open(main_conf, "w") as f:
+            f.write(original_pf.rstrip() + "\n")
+            f.write('dummynet-anchor "wifi_cut"\n')
+            f.write('anchor "wifi_cut"\n')
+
+        # 載入含 anchor 引用的主規則
+        subprocess.run(["pfctl", "-f", main_conf], capture_output=True)
+        # 載入 anchor 內容
         subprocess.run(
-            ["pfctl", "-a", "wifi_cut", "-f", pf_conf],
+            ["pfctl", "-a", "wifi_cut", "-f", anchor_conf],
             check=True, capture_output=True
         )
         subprocess.run(["pfctl", "-E"], capture_output=True)
@@ -106,6 +123,9 @@ class Throttler:
                 ["dnctl", "pipe", "delete", str(pipe_out)],
                 capture_output=True
             )
+        # 還原原始 pf 規則（移除 wifi_cut anchor 引用）
+        if os.path.exists("/etc/pf.conf"):
+            subprocess.run(["pfctl", "-f", "/etc/pf.conf"], capture_output=True)
         print("[*] macOS dummynet throttle removed")
 
     # ── Windows: pydivert token bucket ──
