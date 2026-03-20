@@ -267,7 +267,7 @@ def main():
     parser.add_argument("-t", "--timeout", type=int, default=3, help="Scan timeout (seconds)")
     parser.add_argument("--interval", type=float, default=1.5, help="ARP packet interval (seconds)")
 
-    sub = parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("scan", help="Scan and list all devices on the network")
 
@@ -281,6 +281,9 @@ def main():
     sub.add_parser("interactive", help="Interactive mode: scan, select, block")
 
     args = parser.parse_args()
+
+    if not args.command:
+        args.command = "interactive"
 
     if args.command == "scan":
         cmd_scan(args)
