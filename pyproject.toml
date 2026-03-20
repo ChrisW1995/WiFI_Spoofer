@@ -1,0 +1,17 @@
+[project]
+name = "wifi-cut"
+version = "0.1.0"
+description = "ARP Spoofing based WiFi device blocker"
+requires-python = ">=3.10"
+dependencies = [
+    "scapy>=2.5.0",
+    "rich>=13.0",
+    "InquirerPy>=0.3.4",
+]
+
+[project.optional-dependencies]
+windows = ["pydivert>=2.1.0"]
+dev = ["pyinstaller>=6.0"]
+
+[project.scripts]
+wifi-cut = "wifi_cut.cli:main"

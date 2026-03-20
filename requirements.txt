@@ -1,0 +1,4 @@
+scapy>=2.5.0
+rich>=13.0
+InquirerPy>=0.3.4
+pydivert>=2.1.0; sys_platform == "win32"
