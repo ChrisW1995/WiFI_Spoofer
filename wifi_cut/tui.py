@@ -6,6 +6,7 @@ import time
 from rich.console import Console
 from rich.live import Live
 from InquirerPy import inquirer
+from InquirerPy.base import Choice
 
 from wifi_cut.session import SessionManager
 from wifi_cut.ui_helpers import make_device_table, make_status_panel, format_device_choice
@@ -141,7 +142,7 @@ def _handle_cut(session: SessionManager, timeout: int) -> None:
         return
 
     choices = [
-        {"name": format_device_choice(d, session.gateway.ip), "value": d.ip}
+        Choice(value=d.ip, name=format_device_choice(d, session.gateway.ip))
         for d in selectable
     ]
 
@@ -167,7 +168,7 @@ def _handle_uncut(session: SessionManager) -> None:
         console.print("[yellow]目前沒有封鎖中的裝置。[/yellow]")
         return
 
-    choices = [{"name": ip, "value": ip} for ip in sorted(session.blocked_ips)]
+    choices = [Choice(value=ip, name=ip) for ip in sorted(session.blocked_ips)]
 
     try:
         selected = inquirer.checkbox(
@@ -200,7 +201,7 @@ def _handle_throttle(session: SessionManager, timeout: int) -> None:
         return
 
     choices = [
-        {"name": format_device_choice(d, session.gateway.ip), "value": d.ip}
+        Choice(value=d.ip, name=format_device_choice(d, session.gateway.ip))
         for d in selectable
     ]
 
@@ -235,7 +236,7 @@ def _handle_unthrottle(session: SessionManager) -> None:
         return
 
     choices = [
-        {"name": f"{ip} ({bw})", "value": ip}
+        Choice(value=ip, name=f"{ip} ({bw})")
         for ip, bw in sorted(session.throttled_ips.items())
     ]
 
@@ -267,7 +268,7 @@ def _handle_bw_test(session: SessionManager, timeout: int) -> None:
         return
 
     choices = [
-        {"name": format_device_choice(d, session.gateway.ip), "value": d.ip}
+        Choice(value=d.ip, name=format_device_choice(d, session.gateway.ip))
         for d in selectable
     ]
 
@@ -406,7 +407,7 @@ def _handle_pulse_block(session: SessionManager, timeout: int) -> None:
         return
 
     choices = [
-        {"name": format_device_choice(d, session.gateway.ip), "value": d.ip}
+        Choice(value=d.ip, name=format_device_choice(d, session.gateway.ip))
         for d in selectable
     ]
 

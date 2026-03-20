@@ -18,6 +18,8 @@ a = Analysis(
         'wifi_cut.platform_check',
         # InquirerPy + prompt_toolkit
         'InquirerPy',
+        'InquirerPy.base',
+        'InquirerPy.base.control',
         'InquirerPy.prompts.list',
         'InquirerPy.prompts.checkbox',
         'InquirerPy.prompts.input',
