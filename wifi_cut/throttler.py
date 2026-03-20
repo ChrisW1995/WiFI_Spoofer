@@ -55,17 +55,25 @@ class Throttler:
 
     # ── macOS: dnctl + pfctl ──
 
+    @staticmethod
+    def _to_dnctl_bw(bw: str) -> str:
+        """將頻寬字串轉為 dnctl 認得的格式（純數字 + bit/s）。
+        macOS dnctl 不認得 K/M/G 前綴，需要展開為純數字。"""
+        bps = parse_bandwidth(bw) * 8  # parse_bandwidth 回傳 bytes/sec
+        return f"{bps}bit/s"
+
     def _start_macos(self) -> None:
+        dnctl_bw = self._to_dnctl_bw(self.bandwidth)
         for i, ip in enumerate(self.targets):
             pipe_in = self.pipe_base + i * 2
             pipe_out = self.pipe_base + i * 2 + 1
 
             subprocess.run(
-                ["dnctl", "pipe", str(pipe_in), "config", "bw", self.bandwidth],
+                ["dnctl", "pipe", str(pipe_in), "config", "bw", dnctl_bw],
                 check=True
             )
             subprocess.run(
-                ["dnctl", "pipe", str(pipe_out), "config", "bw", self.bandwidth],
+                ["dnctl", "pipe", str(pipe_out), "config", "bw", dnctl_bw],
                 check=True
             )
 
