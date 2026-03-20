@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from typing import Optional
 
 from scapy.all import Ether, ARP, srp
+from mac_vendor_lookup import MacLookup, VendorNotFoundError
+
+_mac_lookup = MacLookup()
 
 
 @dataclass
@@ -52,7 +55,14 @@ def get_local_ip_and_mask(interface: str) -> tuple[str, str]:
 def resolve_hostname(ip: str) -> Optional[str]:
     try:
         return socket.gethostbyaddr(ip)[0]
-    except socket.herror:
+    except (socket.herror, socket.gaierror, OSError):
+        return None
+
+
+def resolve_vendor(mac: str) -> Optional[str]:
+    try:
+        return _mac_lookup.lookup(mac)
+    except (VendorNotFoundError, KeyError):
         return None
 
 
@@ -77,7 +87,8 @@ def scan_network(cidr: str, interface: str, timeout: int = 3) -> list[Device]:
         ip = received.psrc
         mac = received.hwsrc
         hostname = resolve_hostname(ip)
-        devices.append(Device(ip=ip, mac=mac, hostname=hostname))
+        vendor = resolve_vendor(mac)
+        devices.append(Device(ip=ip, mac=mac, hostname=hostname, vendor=vendor))
 
     devices.sort(key=lambda d: ipaddress.IPv4Address(d.ip))
     return devices

@@ -1,5 +1,6 @@
 scapy>=2.5.0
 rich>=13.0
 pick>=2.0.0
+mac-vendor-lookup>=0.1.12
 windows-curses>=2.3.0; sys_platform == "win32"
 pydivert>=2.1.0; sys_platform == "win32"

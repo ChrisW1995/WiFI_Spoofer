@@ -19,6 +19,8 @@ a = Analysis(
         # pick (curses-based selection)
         'pick',
         'curses',
+        # MAC vendor lookup
+        'mac_vendor_lookup',
         # rich
         'rich',
         'rich.console',

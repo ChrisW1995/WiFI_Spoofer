@@ -19,6 +19,7 @@ def make_device_table(
     table.add_column("#", style="dim", width=4)
     table.add_column("IP", min_width=16)
     table.add_column("MAC", min_width=18)
+    table.add_column("Vendor", min_width=15)
     table.add_column("Hostname", min_width=20)
     table.add_column("Note", min_width=10)
     table.add_column("Status", min_width=12)
@@ -30,6 +31,7 @@ def make_device_table(
         elif d.ip == local_ip:
             note = "[green]You[/green]"
 
+        vendor = d.vendor or "--"
         hostname = d.hostname or "--"
 
         if d.ip in blocked_ips:
@@ -40,7 +42,7 @@ def make_device_table(
         else:
             status = ""
 
-        table.add_row(str(i), d.ip, d.mac, hostname, note, status)
+        table.add_row(str(i), d.ip, d.mac, vendor, hostname, note, status)
 
     return table
 
@@ -68,8 +70,8 @@ def make_status_panel(
 
 
 def format_device_choice(device: Device, gateway_ip: str) -> str:
-    hostname = device.hostname or "--"
-    label = f"{device.ip:<16} {device.mac:<18} {hostname}"
+    name = device.hostname or device.vendor or "--"
+    label = f"{device.ip:<16} {device.mac:<18} {name}"
     if device.ip == gateway_ip:
         label += "  (Gateway)"
     return label
