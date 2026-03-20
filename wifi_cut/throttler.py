@@ -142,14 +142,9 @@ class Throttler:
         with pydivert.WinDivert(filt) as w:
             while not self._win_stop_event.is_set():
                 try:
-                    packet = w.recv(timeout=0.5)
+                    packet = w.recv()
                 except OSError:
                     break
-                if packet is None:
-                    now = time.monotonic()
-                    tokens = min(bytes_per_sec, tokens + bytes_per_sec * (now - last_time))
-                    last_time = now
-                    continue
 
                 now = time.monotonic()
                 elapsed = now - last_time

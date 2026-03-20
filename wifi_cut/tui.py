@@ -29,13 +29,13 @@ def _pick_multi(title: str, options: list[str]) -> list[int]:
     """多選選單，回傳選中的索引列表。空選按 Enter 回傳空列表。"""
     if not options:
         return []
-    _, indices = pick(
+    selected = pick(
         options,
         title + "\n(↑↓ 移動, 空格 選擇, Enter 確認)",
         multiselect=True,
         min_selection_count=0,
     )
-    return list(indices)
+    return [idx for _, idx in selected]
 
 
 def _pick_single(title: str, options: list[str], default: int = 0) -> int:
