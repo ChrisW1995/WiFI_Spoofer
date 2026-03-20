@@ -16,19 +16,9 @@ a = Analysis(
         'wifi_cut.gateway',
         'wifi_cut.throttler',
         'wifi_cut.platform_check',
-        # questionary + prompt_toolkit
-        'questionary',
-        'questionary.prompts',
-        'questionary.prompts.select',
-        'questionary.prompts.checkbox',
-        'questionary.prompts.text',
-        'questionary.prompts.confirm',
-        'prompt_toolkit',
-        'prompt_toolkit.application',
-        'prompt_toolkit.key_binding',
-        'prompt_toolkit.formatted_text',
-        'prompt_toolkit.styles',
-        'prompt_toolkit.validation',
+        # pick (curses-based selection)
+        'pick',
+        'curses',
         # rich
         'rich',
         'rich.console',
