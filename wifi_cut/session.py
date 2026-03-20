@@ -1,3 +1,4 @@
+import threading
 import time
 
 from wifi_cut.gateway import get_gateway_info, get_mac_by_ip, GatewayInfo
@@ -11,6 +12,7 @@ from wifi_cut.scanner import (
     get_local_ip_and_mask,
     calculate_cidr,
     scan_network,
+    arp_ping,
     Device,
 )
 from wifi_cut.spoofer import ARPSpoofer
@@ -30,6 +32,8 @@ class SessionManager:
         self._original_forwarding: bool | None = None
         self._start_time: float = time.time()
         self._interval: float = 1.5
+        self._pulse_thread: threading.Thread | None = None
+        self._pulse_stop = threading.Event()
 
     def initialize(self, interval: float = 1.5) -> None:
         check_root()
@@ -179,7 +183,51 @@ class SessionManager:
             if d.ip != self.gateway.ip and d.ip != self.local_ip
         ]
 
+    def ping_target(self, ip: str) -> bool:
+        """ARP ping 目標，確認仍在 WiFi。"""
+        assert self.gateway is not None
+        return arp_ping(ip, self.gateway.interface)
+
+    def update_throttle_bandwidth(self, ips: list[str], bandwidth: str) -> None:
+        """動態更新限速頻寬（停止舊 throttler，以新頻寬重建）。"""
+        if self._throttler:
+            self._throttler.stop()
+        self._throttler = Throttler(targets=ips, bandwidth=bandwidth)
+        self._throttler.start()
+        for ip in ips:
+            self.throttled_ips[ip] = bandwidth
+
+    def start_pulse_block(self, ips: list[str], bandwidth: str,
+                          block_secs: float = 2.0, allow_secs: float = 5.0) -> None:
+        """限速 + 脈衝封鎖模式。"""
+        self.throttle(ips, bandwidth)
+        self._pulse_stop.clear()
+        self._pulse_thread = threading.Thread(
+            target=self._pulse_loop,
+            args=(block_secs, allow_secs),
+            daemon=True,
+        )
+        self._pulse_thread.start()
+
+    def stop_pulse_block(self) -> None:
+        """停止脈衝封鎖。"""
+        self._pulse_stop.set()
+        if self._pulse_thread:
+            self._pulse_thread.join(timeout=5)
+            self._pulse_thread = None
+        set_ip_forwarding(True)
+
+    def _pulse_loop(self, block_secs: float, allow_secs: float) -> None:
+        """脈衝封鎖迴圈：週期性短暫關閉 IP forwarding 打斷影片上傳。"""
+        while not self._pulse_stop.wait(timeout=allow_secs):
+            set_ip_forwarding(False)
+            if self._pulse_stop.wait(timeout=block_secs):
+                break
+            set_ip_forwarding(True)
+        set_ip_forwarding(True)
+
     def cleanup(self) -> None:
+        self.stop_pulse_block()
         if self._throttler:
             self._throttler.stop()
             self._throttler = None

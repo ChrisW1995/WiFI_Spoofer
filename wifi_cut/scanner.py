@@ -56,6 +56,15 @@ def resolve_hostname(ip: str) -> Optional[str]:
         return None
 
 
+def arp_ping(ip: str, interface: str, timeout: int = 2) -> bool:
+    """ARP ping 單一 IP，回傳是否在線。"""
+    ans, _ = srp(
+        Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip),
+        iface=interface, timeout=timeout, verbose=False
+    )
+    return len(ans) > 0
+
+
 def scan_network(cidr: str, interface: str, timeout: int = 3) -> list[Device]:
     """ARP 掃描子網路，回傳所有活躍裝置。"""
     ans, _ = srp(

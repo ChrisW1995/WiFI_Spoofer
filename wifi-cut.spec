@@ -6,6 +6,7 @@ a = Analysis(
     binaries=[],
     datas=[],
     hiddenimports=[
+        # wifi_cut modules
         'wifi_cut.cli',
         'wifi_cut.tui',
         'wifi_cut.session',
@@ -15,13 +16,36 @@ a = Analysis(
         'wifi_cut.gateway',
         'wifi_cut.throttler',
         'wifi_cut.platform_check',
+        # InquirerPy + prompt_toolkit
         'InquirerPy',
         'InquirerPy.prompts.list',
         'InquirerPy.prompts.checkbox',
         'InquirerPy.prompts.input',
         'InquirerPy.prompts.confirm',
+        'InquirerPy.prompts.fuzzy',
         'prompt_toolkit',
+        'prompt_toolkit.application',
+        'prompt_toolkit.key_binding',
+        'prompt_toolkit.formatted_text',
+        'prompt_toolkit.styles',
+        'prompt_toolkit.validation',
+        # rich
         'rich',
+        'rich.console',
+        'rich.table',
+        'rich.panel',
+        'rich.live',
+        'rich.text',
+        'rich.markup',
+        # scapy (PyInstaller often misses these)
+        'scapy.all',
+        'scapy.layers.l2',
+        'scapy.layers.inet',
+        'scapy.arch',
+        # Windows-specific (conditional import)
+        'pydivert',
+        # stdlib (sometimes missed)
+        'urllib.request',
     ],
     hookspath=[],
     hooksconfig={},
