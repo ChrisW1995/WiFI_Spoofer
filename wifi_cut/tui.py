@@ -1,4 +1,5 @@
 import atexit
+import threading
 import time
 
 from pick import pick
@@ -59,6 +60,15 @@ def _input_confirm(prompt: str, default: bool = True) -> bool:
     if not raw:
         return default
     return raw in ("y", "yes")
+
+
+def _wait_for_enter(stop_event: threading.Event) -> None:
+    """背景 thread：等待 Enter 鍵，設定 stop_event。"""
+    try:
+        input()
+    except EOFError:
+        pass
+    stop_event.set()
 
 
 def run_tui(timeout: int = 3, interval: float = 1.5) -> None:
@@ -373,11 +383,14 @@ def _handle_pulse_block(session: SessionManager, timeout: int) -> None:
     session.start_pulse_block(selected, bw, block_secs, allow_secs)
     console.print(f"[bold magenta]Pulse Block 啟動[/bold magenta]")
     console.print(f"  限速: {bw} | 封鎖: {block_secs}s | 間隔: {allow_secs}s")
-    console.print("[dim]按 Ctrl+C 返回主選單（Pulse Block 持續運行）[/dim]\n")
+    console.print("[dim]按 Enter 返回主選單（Pulse Block 持續運行）[/dim]\n")
 
+    stop = threading.Event()
+    t = threading.Thread(target=_wait_for_enter, args=(stop,), daemon=True)
+    t.start()
     try:
         with Live(console=console, refresh_per_second=1) as live:
-            while True:
+            while not stop.is_set():
                 ping_ok = session.ping_target(selected[0])
                 ping_status = "[green]Online[/green]" if ping_ok else "[red]Offline![/red]"
                 panel = Panel(
@@ -392,17 +405,22 @@ def _handle_pulse_block(session: SessionManager, timeout: int) -> None:
                 live.update(panel)
                 time.sleep(3)
     except KeyboardInterrupt:
-        if _input_confirm("要停止 Pulse Block 嗎？", default=False):
-            session.stop_pulse_block()
-            session.unthrottle(selected)
-            console.print("[green]Pulse Block 已停止。[/green]")
+        pass
+
+    if _input_confirm("要停止 Pulse Block 嗎？", default=False):
+        session.stop_pulse_block()
+        session.unthrottle(selected)
+        console.print("[green]Pulse Block 已停止。[/green]")
 
 
 def _handle_status(session: SessionManager) -> None:
-    console.print("[dim]按 Ctrl+C 返回主選單[/dim]\n")
+    console.print("[dim]按 Enter 返回主選單[/dim]\n")
+    stop = threading.Event()
+    t = threading.Thread(target=_wait_for_enter, args=(stop,), daemon=True)
+    t.start()
     try:
         with Live(console=console, refresh_per_second=1) as live:
-            while True:
+            while not stop.is_set():
                 panel = make_status_panel(
                     blocked_count=len(session.blocked_ips),
                     throttled_count=len(session.throttled_ips),
