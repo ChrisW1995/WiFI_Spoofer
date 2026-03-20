@@ -125,6 +125,7 @@ def _handle_scan(session: SessionManager, timeout: int) -> None:
     )
     console.print(table)
     console.print(f"找到 {len(devices)} 個裝置")
+    input("\n按 Enter 返回主選單...")
 
 
 def _handle_view(session: SessionManager) -> None:
@@ -137,6 +138,7 @@ def _handle_view(session: SessionManager) -> None:
         session.blocked_ips, session.throttled_ips,
     )
     console.print(table)
+    input("\n按 Enter 返回主選單...")
 
 
 def _device_options(devices, gateway_ip):
